@@ -83,23 +83,27 @@ end
 **Files Modified:**
 - `common.mk` - Added `type_system.$(OBJEXT)` to COMMONOBJS
 
+### ✅ Phase 5: Parser Grammar Extensions (COMPLETED)
+
+**Files Modified:**
+- `parse.y` - Complete grammar support for type annotations
+
+**Implementation:**
+- Added `check_primitive_type_name()` helper function
+- Modified `f_arg_item` rule to support `param: Type` syntax
+- Extended method definition rules for return type annotations:
+  - Regular methods: `def foo() -> Type ... end`
+  - Endless methods: `def foo() -> Type = expr`
+  - Singleton methods: `def self.foo() -> Type ... end`
+- Uses existing `tCONSTANT` token (no lexer changes needed!)
+- Parse-time validation of type names
+- Stores types in AST node fields
+
+**Status:** Parser can now accept and store all type annotations.
+
 ## Remaining Work
 
-### 🔄 Phase 5: Lexer Support (PENDING)
-
-**Tasks:**
-- Modify lexer to recognize type names (Integer, Float, etc.) in type annotation context
-- Distinguish between type annotations and regular constant references
-- Handle `:` and `->` tokens in parameter and return type positions
-
-### 🔄 Phase 6: Return Type Grammar (PENDING)
-
-**Tasks:**
-- Add grammar rules for `-> ReturnType` in method definitions
-- Support both `def ... end` and endless method syntax
-- Store return type in method definition nodes
-
-### 🔄 Phase 7: Type Checking Implementation (PENDING)
+### 🔄 Phase 6: Type Checking Implementation (PENDING)
 
 **Files to Modify:**
 - `compile.c` - Add type checking during compilation
