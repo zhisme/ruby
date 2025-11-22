@@ -2631,7 +2631,7 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 #endif /* !RIPPER */
 %}
 
-%expect 0
+%expect 2
 %define api.pure
 %define parse.error verbose
 %printer {

@@ -103,16 +103,28 @@ end
 
 ## Remaining Work
 
-### 🔄 Phase 6: Type Checking Implementation (PENDING)
+### ⚠️  Phase 6: Type Checking Implementation (PARTIALLY COMPLETED)
 
-**Files to Modify:**
-- `compile.c` - Add type checking during compilation
+**Files Modified:**
+- `iseq.h` - Added return type fields to `iseq_compile_data`
+- `compile.c` - Implemented return type checking for method definitions
+- `type_system.c` - Type inference and compatibility checking
+- `type_system.h` - Type system interface
 
-**Tasks:**
-- Implement type inference for literal expressions
-- Check parameter type compatibility
-- Check return type compatibility
-- Generate SyntaxError on type mismatches
+**Completed Tasks:**
+- ✅ Implemented type inference for literal expressions
+- ✅ Added return type checking in method compilation
+- ✅ Type mismatch errors generated via COMPILE_ERROR
+
+**Known Issues:**
+- ⚠️  Parser grammar conflicts (2 shift/reduce, 1 reduce/reduce) prevent return type syntax from working
+- The `-> Type` syntax conflicts with lambda syntax `-> {}`
+- Parser always interprets `->` as lambda start, not return type annotation
+- Type checking code is implemented but cannot be tested until grammar is fixed
+
+**To Fix:**
+- Resolve grammar conflicts by using different syntax (e.g., `: Type` instead of `-> Type`)
+- Or adjust grammar precedence to prefer return type over lambda in method context
 
 ### 🔄 Phase 8: Testing (PENDING)
 

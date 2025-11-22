@@ -210,47 +210,4 @@ rb_types_compatible(primitive_type_t expected, primitive_type_t actual)
     return expected == actual;
 }
 
-/* Type error: general type mismatch */
-void
-rb_type_error_mismatch(struct parser_params *p, const char *context,
-                      primitive_type_t expected, primitive_type_t actual,
-                      int lineno, int column)
-{
-    const char *expected_name = primitive_type_name(expected);
-    const char *actual_name = primitive_type_name(actual);
-
-    rb_compile_error(p, "Type error in %s: expected %s, got %s",
-                    context, expected_name, actual_name);
-}
-
-/* Type error: return type mismatch */
-void
-rb_type_error_return(struct parser_params *p, ID method_name,
-                    primitive_type_t expected, primitive_type_t actual,
-                    int lineno, int column)
-{
-    const char *expected_name = primitive_type_name(expected);
-    const char *actual_name = primitive_type_name(actual);
-    const char *method_name_str = rb_id2name(method_name);
-
-    rb_compile_error(p, "Type error: method '%s' expected return type %s, got %s",
-                    method_name_str ? method_name_str : "<unknown>",
-                    expected_name, actual_name);
-}
-
-/* Type error: parameter type mismatch */
-void
-rb_type_error_param(struct parser_params *p, ID method_name, ID param_name,
-                   primitive_type_t expected, primitive_type_t actual,
-                   int lineno, int column)
-{
-    const char *expected_name = primitive_type_name(expected);
-    const char *actual_name = primitive_type_name(actual);
-    const char *method_name_str = rb_id2name(method_name);
-    const char *param_name_str = rb_id2name(param_name);
-
-    rb_compile_error(p, "Type error: method '%s' parameter '%s' expected %s, got %s",
-                    method_name_str ? method_name_str : "<unknown>",
-                    param_name_str ? param_name_str : "<unknown>",
-                    expected_name, actual_name);
-}
+/* Type error functions removed - error reporting is done directly in compile.c */

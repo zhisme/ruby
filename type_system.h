@@ -89,17 +89,6 @@ primitive_type_t rb_infer_node_type(NODE *node);
 /* Check if two types are compatible */
 int rb_types_compatible(primitive_type_t expected, primitive_type_t actual);
 
-/* Type checking error messages */
-void rb_type_error_mismatch(struct parser_params *p, const char *context,
-                           primitive_type_t expected, primitive_type_t actual,
-                           int lineno, int column);
-
-void rb_type_error_return(struct parser_params *p, ID method_name,
-                         primitive_type_t expected, primitive_type_t actual,
-                         int lineno, int column);
-
-void rb_type_error_param(struct parser_params *p, ID method_name, ID param_name,
-                        primitive_type_t expected, primitive_type_t actual,
-                        int lineno, int column);
+/* Note: Type error reporting is done directly in compile.c using COMPILE_ERROR macro */
 
 #endif /* RUBY_TYPE_SYSTEM_H */

@@ -142,6 +142,9 @@ struct iseq_compile_data {
     const struct rb_builtin_function *builtin_function_table;
     const NODE *root_node;
     bool catch_except_p; // If a frame of this ISeq may catch exception, set true.
+    /* Static typing support */
+    int expected_return_type;  /* primitive_type_t - expected return type for methods */
+    int has_return_type;       /* Whether a return type annotation was specified */
 #if OPT_SUPPORT_JOKE
     st_table *labels_table;
 #endif

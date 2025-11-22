@@ -47,6 +47,7 @@
 #include "builtin.h"
 #include "insns.inc"
 #include "insns_info.inc"
+#include "type_system.h"
 
 #define FIXNUM_INC(n, i) ((n)+(INT2FIX(i)&~FIXNUM_FLAG))
 
@@ -1546,6 +1547,72 @@ new_child_iseq_with_callback(rb_iseq_t *iseq, const struct rb_iseq_new_with_call
                                  line_no, parent, type, ISEQ_COMPILE_DATA(iseq)->option);
     debugs("[new_child_iseq_with_callback]< ---------------------------------------\n");
     return ret_iseq;
+}
+
+/* Helper to find the last expression in a method body for type checking */
+static const NODE *
+find_method_last_expr(const NODE *body)
+{
+    if (!body) return NULL;
+
+    /* Method body is typically a SCOPE node containing the actual body */
+    if (nd_type_p(body, NODE_SCOPE)) {
+        body = RNODE_SCOPE(body)->nd_body;
+    }
+
+    if (!body) return NULL;
+
+    /* If it's a block, get the last statement */
+    if (nd_type_p(body, NODE_BLOCK)) {
+        const NODE *last = body;
+        while (RNODE_BLOCK(last)->nd_next) {
+            last = RNODE_BLOCK(last)->nd_next;
+        }
+        return RNODE_BLOCK(last)->nd_head;
+    }
+
+    /* Otherwise, the body itself is the last (and only) expression */
+    return body;
+}
+
+/* Check method return type annotation against actual return value */
+static void
+check_method_return_type(const rb_iseq_t *iseq, ID method_name, int expected_type,
+                        const NODE *body_node, int line)
+{
+    if (expected_type == PRIM_TYPE_UNKNOWN) {
+        return; /* No type annotation, nothing to check */
+    }
+
+    const NODE *last_expr = find_method_last_expr(body_node);
+    if (!last_expr) {
+        /* Empty method body returns nil */
+        primitive_type_t actual_type = PRIM_TYPE_NIL;
+        if (!rb_types_compatible((primitive_type_t)expected_type, actual_type)) {
+            const char *expected_name = primitive_type_name((primitive_type_t)expected_type);
+            const char *actual_name = primitive_type_name(actual_type);
+            const char *method_name_str = rb_id2name(method_name);
+            COMPILE_ERROR(iseq, line,
+                         "Type error: method '%s' expected return type %s, got %s",
+                         method_name_str ? method_name_str : "<unknown>",
+                         expected_name, actual_name);
+        }
+        return;
+    }
+
+    /* Infer the type of the last expression */
+    primitive_type_t actual_type = rb_infer_node_type((NODE *)last_expr);
+
+    /* Check if types are compatible */
+    if (!rb_types_compatible((primitive_type_t)expected_type, actual_type)) {
+        const char *expected_name = primitive_type_name((primitive_type_t)expected_type);
+        const char *actual_name = primitive_type_name(actual_type);
+        const char *method_name_str = rb_id2name(method_name);
+        COMPILE_ERROR(iseq, line,
+                     "Type error: method '%s' expected return type %s, got %s",
+                     method_name_str ? method_name_str : "<unknown>",
+                     expected_name, actual_name);
+    }
 }
 
 static void
@@ -11362,6 +11429,14 @@ iseq_compile_each0(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const no
       }
       case NODE_DEFN:{
         ID mid = RNODE_DEFN(node)->nd_mid;
+        int return_type = RNODE_DEFN(node)->nd_return_type;
+
+        /* Check return type annotation before creating iseq */
+        if (return_type != PRIM_TYPE_UNKNOWN) {
+            check_method_return_type(iseq, mid, return_type,
+                                   RNODE_DEFN(node)->nd_defn, line);
+        }
+
         const rb_iseq_t *method_iseq = NEW_ISEQ(RNODE_DEFN(node)->nd_defn,
                                                 rb_id2str(mid),
                                                 ISEQ_TYPE_METHOD, line);
@@ -11378,6 +11453,14 @@ iseq_compile_each0(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const no
       }
       case NODE_DEFS:{
         ID mid = RNODE_DEFS(node)->nd_mid;
+        int return_type = RNODE_DEFS(node)->nd_return_type;
+
+        /* Check return type annotation before creating iseq */
+        if (return_type != PRIM_TYPE_UNKNOWN) {
+            check_method_return_type(iseq, mid, return_type,
+                                   RNODE_DEFS(node)->nd_defn, line);
+        }
+
         const rb_iseq_t * singleton_method_iseq = NEW_ISEQ(RNODE_DEFS(node)->nd_defn,
                                                            rb_id2str(mid),
                                                            ISEQ_TYPE_METHOD, line);
