@@ -2870,6 +2870,15 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 %token tIGNORED_NL tCOMMENT tEMBDOC_BEG tEMBDOC tEMBDOC_END
 %token tHEREDOC_BEG tHEREDOC_END k__END__
 
+/* Static type annotation tokens */
+%token <id> tTYPE_INTEGER   "Integer type"
+%token <id> tTYPE_FLOAT     "Float type"
+%token <id> tTYPE_STRING    "String type"
+%token <id> tTYPE_SYMBOL    "Symbol type"
+%token <id> tTYPE_TRUE      "TrueClass type"
+%token <id> tTYPE_FALSE     "FalseClass type"
+%token <id> tTYPE_NIL       "NilClass type"
+
 /*
  *	precedence table
  */
@@ -2906,6 +2915,16 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 %rule %inline ident_or_const
                 : tIDENTIFIER
                 | tCONSTANT
+                ;
+
+%rule %inline type_name <num>
+                : tTYPE_INTEGER  {$$ = 1;}  /* PRIM_TYPE_INTEGER */
+                | tTYPE_FLOAT    {$$ = 2;}  /* PRIM_TYPE_FLOAT */
+                | tTYPE_STRING   {$$ = 3;}  /* PRIM_TYPE_STRING */
+                | tTYPE_SYMBOL   {$$ = 4;}  /* PRIM_TYPE_SYMBOL */
+                | tTYPE_TRUE     {$$ = 5;}  /* PRIM_TYPE_TRUE */
+                | tTYPE_FALSE    {$$ = 6;}  /* PRIM_TYPE_FALSE */
+                | tTYPE_NIL      {$$ = 7;}  /* PRIM_TYPE_NIL */
                 ;
 
 %rule %inline user_or_keyword_variable
@@ -6459,7 +6478,14 @@ f_arg_asgn	: f_norm_arg
 f_arg_item	: f_arg_asgn
                     {
                         $$ = NEW_ARGS_AUX($1, 1, &NULL_LOC);
+                        $$->nd_type = 0;  /* PRIM_TYPE_UNKNOWN */
                     /*% ripper: $:1 %*/
+                    }
+                | f_arg_asgn ':' type_name
+                    {
+                        $$ = NEW_ARGS_AUX($1, 1, &NULL_LOC);
+                        $$->nd_type = $3;  /* Store type annotation */
+                    /*% ripper: [$:1, $:3] %*/
                     }
                 | tLPAREN f_margs rparen
                     {
@@ -11295,6 +11321,7 @@ rb_node_defn_new(struct parser_params *p, ID nd_mid, NODE *nd_defn, const YYLTYP
     rb_node_defn_t *n = NODE_NEWNODE(NODE_DEFN, rb_node_defn_t, loc);
     n->nd_mid = nd_mid;
     n->nd_defn = nd_defn;
+    n->nd_return_type = 0;  /* PRIM_TYPE_UNKNOWN */
 
     return n;
 }
@@ -11306,6 +11333,7 @@ rb_node_defs_new(struct parser_params *p, NODE *nd_recv, ID nd_mid, NODE *nd_def
     n->nd_recv = nd_recv;
     n->nd_mid = nd_mid;
     n->nd_defn = nd_defn;
+    n->nd_return_type = 0;  /* PRIM_TYPE_UNKNOWN */
 
     return n;
 }

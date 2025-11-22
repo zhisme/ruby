@@ -181,6 +181,7 @@ COMMONOBJS    = \
 		struct.$(OBJEXT) \
 		symbol.$(OBJEXT) \
 		thread.$(OBJEXT) \
+		type_system.$(OBJEXT) \
 		time.$(OBJEXT) \
 		transcode.$(OBJEXT) \
 		util.$(OBJEXT) \

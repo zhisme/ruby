@@ -798,6 +798,7 @@ typedef struct RNode_ARGS_AUX {
     ID nd_pid;
     int nd_plen;
     struct RNode *nd_next;
+    int nd_type;  /* primitive_type_t for static typing */
 } rb_node_args_aux_t;
 
 typedef struct RNode_OPT_ARG {
@@ -856,6 +857,7 @@ typedef struct RNode_DEFN {
 
     ID nd_mid;
     struct RNode *nd_defn;
+    int nd_return_type;  /* primitive_type_t for static typing */
 } rb_node_defn_t;
 
 typedef struct RNode_DEFS {
@@ -864,6 +866,7 @@ typedef struct RNode_DEFS {
     struct RNode *nd_recv;
     ID nd_mid;
     struct RNode *nd_defn;
+    int nd_return_type;  /* primitive_type_t for static typing */
 } rb_node_defs_t;
 
 typedef struct RNode_ALIAS {
