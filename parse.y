@@ -1635,6 +1635,24 @@ aryptn_pre_args(struct parser_params *p, VALUE pre_arg, VALUE pre_args)
 
 #define KWD2EID(t, v) keyword_##t
 
+/* Check if ID is a primitive type name and return the type enum */
+static int
+check_primitive_type_name(struct parser_params *p, ID id)
+{
+    const char *name = rb_id2name(id);
+    if (!name) return 0;  /* PRIM_TYPE_UNKNOWN */
+
+    if (strcmp(name, "Integer") == 0) return 1;    /* PRIM_TYPE_INTEGER */
+    if (strcmp(name, "Float") == 0) return 2;      /* PRIM_TYPE_FLOAT */
+    if (strcmp(name, "String") == 0) return 3;     /* PRIM_TYPE_STRING */
+    if (strcmp(name, "Symbol") == 0) return 4;     /* PRIM_TYPE_SYMBOL */
+    if (strcmp(name, "TrueClass") == 0) return 5;  /* PRIM_TYPE_TRUE */
+    if (strcmp(name, "FalseClass") == 0) return 6; /* PRIM_TYPE_FALSE */
+    if (strcmp(name, "NilClass") == 0) return 7;   /* PRIM_TYPE_NIL */
+
+    return 0;  /* PRIM_TYPE_UNKNOWN - not a recognized primitive type */
+}
+
 static NODE *
 new_scope_body(struct parser_params *p, rb_node_args_t *args, NODE *body, NODE *parent, const YYLTYPE *loc)
 {
@@ -2870,15 +2888,6 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 %token tIGNORED_NL tCOMMENT tEMBDOC_BEG tEMBDOC tEMBDOC_END
 %token tHEREDOC_BEG tHEREDOC_END k__END__
 
-/* Static type annotation tokens */
-%token <id> tTYPE_INTEGER   "Integer type"
-%token <id> tTYPE_FLOAT     "Float type"
-%token <id> tTYPE_STRING    "String type"
-%token <id> tTYPE_SYMBOL    "Symbol type"
-%token <id> tTYPE_TRUE      "TrueClass type"
-%token <id> tTYPE_FALSE     "FalseClass type"
-%token <id> tTYPE_NIL       "NilClass type"
-
 /*
  *	precedence table
  */
@@ -2915,16 +2924,6 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 %rule %inline ident_or_const
                 : tIDENTIFIER
                 | tCONSTANT
-                ;
-
-%rule %inline type_name <num>
-                : tTYPE_INTEGER  {$$ = 1;}  /* PRIM_TYPE_INTEGER */
-                | tTYPE_FLOAT    {$$ = 2;}  /* PRIM_TYPE_FLOAT */
-                | tTYPE_STRING   {$$ = 3;}  /* PRIM_TYPE_STRING */
-                | tTYPE_SYMBOL   {$$ = 4;}  /* PRIM_TYPE_SYMBOL */
-                | tTYPE_TRUE     {$$ = 5;}  /* PRIM_TYPE_TRUE */
-                | tTYPE_FALSE    {$$ = 6;}  /* PRIM_TYPE_FALSE */
-                | tTYPE_NIL      {$$ = 7;}  /* PRIM_TYPE_NIL */
                 ;
 
 %rule %inline user_or_keyword_variable
@@ -2977,8 +2976,40 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
                     /*% ripper: def!($:head, $:args, $:$) %*/
                         local_pop(p);
                     }
+                | defn_head[head] f_opt_paren_args[args] tLAMBDA tCONSTANT '=' bodystmt
+                    {
+                        int type = check_primitive_type_name(p, $tCONSTANT);
+                        if (type == 0) {
+                            yyerror1(&@tCONSTANT, "invalid return type annotation (expected Integer, Float, String, Symbol, TrueClass, FalseClass, or NilClass)");
+                        }
+                        RNODE_DEFN($head->nd_def)->nd_return_type = type;
+                        endless_method_name(p, $head->nd_mid, &@head);
+                        restore_defun(p, $head);
+                        ($$ = $head->nd_def)->nd_loc = @$;
+                        $bodystmt = new_scope_body(p, $args, $bodystmt, $$, &@$);
+                        RNODE_DEFN($$)->nd_defn = $bodystmt;
+                    /*% ripper: bodystmt!($:bodystmt, Qnil, Qnil, Qnil) %*/
+                    /*% ripper: def!($:head, $:args, $:$) %*/
+                        local_pop(p);
+                    }
                 | defs_head[head] f_opt_paren_args[args] '=' bodystmt
                     {
+                        endless_method_name(p, $head->nd_mid, &@head);
+                        restore_defun(p, $head);
+                        ($$ = $head->nd_def)->nd_loc = @$;
+                        $bodystmt = new_scope_body(p, $args, $bodystmt, $$, &@$);
+                        RNODE_DEFS($$)->nd_defn = $bodystmt;
+                    /*% ripper: bodystmt!($:bodystmt, Qnil, Qnil, Qnil) %*/
+                    /*% ripper: defs!(*$:head[0..2], $:args, $:$) %*/
+                        local_pop(p);
+                    }
+                | defs_head[head] f_opt_paren_args[args] tLAMBDA tCONSTANT '=' bodystmt
+                    {
+                        int type = check_primitive_type_name(p, $tCONSTANT);
+                        if (type == 0) {
+                            yyerror1(&@tCONSTANT, "invalid return type annotation (expected Integer, Float, String, Symbol, TrueClass, FalseClass, or NilClass)");
+                        }
+                        RNODE_DEFS($head->nd_def)->nd_return_type = type;
                         endless_method_name(p, $head->nd_mid, &@head);
                         restore_defun(p, $head);
                         ($$ = $head->nd_def)->nd_loc = @$;
@@ -4678,9 +4709,53 @@ primary		: inline_primary
                 /*% ripper: def!($:head, $:args, $:bodystmt) %*/
                     local_pop(p);
                 }
+            | defn_head[head]
+              f_arglist[args]
+              tLAMBDA
+              tCONSTANT
+                {
+                    int type = check_primitive_type_name(p, $tCONSTANT);
+                    if (type == 0) {
+                        yyerror1(&@tCONSTANT, "invalid return type annotation (expected Integer, Float, String, Symbol, TrueClass, FalseClass, or NilClass)");
+                    }
+                    RNODE_DEFN($head->nd_def)->nd_return_type = type;
+                    push_end_expect_token_locations(p, &@head.beg_pos);
+                }
+              bodystmt
+              k_end
+                {
+                    restore_defun(p, $head);
+                    ($$ = $head->nd_def)->nd_loc = @$;
+                    $bodystmt = new_scope_body(p, $args, $bodystmt, $$, &@$);
+                    RNODE_DEFN($$)->nd_defn = $bodystmt;
+                /*% ripper: def!($:head, $:args, $:bodystmt) %*/
+                    local_pop(p);
+                }
             | defs_head[head]
               f_arglist[args]
                 {
+                    push_end_expect_token_locations(p, &@head.beg_pos);
+                }
+              bodystmt
+              k_end
+                {
+                    restore_defun(p, $head);
+                    ($$ = $head->nd_def)->nd_loc = @$;
+                    $bodystmt = new_scope_body(p, $args, $bodystmt, $$, &@$);
+                    RNODE_DEFS($$)->nd_defn = $bodystmt;
+                /*% ripper: defs!(*$:head[0..2], $:args, $:bodystmt) %*/
+                    local_pop(p);
+                }
+            | defs_head[head]
+              f_arglist[args]
+              tLAMBDA
+              tCONSTANT
+                {
+                    int type = check_primitive_type_name(p, $tCONSTANT);
+                    if (type == 0) {
+                        yyerror1(&@tCONSTANT, "invalid return type annotation (expected Integer, Float, String, Symbol, TrueClass, FalseClass, or NilClass)");
+                    }
+                    RNODE_DEFS($head->nd_def)->nd_return_type = type;
                     push_end_expect_token_locations(p, &@head.beg_pos);
                 }
               bodystmt
@@ -6481,10 +6556,14 @@ f_arg_item	: f_arg_asgn
                         $$->nd_type = 0;  /* PRIM_TYPE_UNKNOWN */
                     /*% ripper: $:1 %*/
                     }
-                | f_arg_asgn ':' type_name
+                | f_arg_asgn ':' tCONSTANT
                     {
+                        int type = check_primitive_type_name(p, $3);
+                        if (type == 0) {
+                            yyerror1(&@3, "invalid type annotation (expected Integer, Float, String, Symbol, TrueClass, FalseClass, or NilClass)");
+                        }
                         $$ = NEW_ARGS_AUX($1, 1, &NULL_LOC);
-                        $$->nd_type = $3;  /* Store type annotation */
+                        $$->nd_type = type;  /* Store type annotation */
                     /*% ripper: [$:1, $:3] %*/
                     }
                 | tLPAREN f_margs rparen
