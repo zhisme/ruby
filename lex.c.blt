@@ -38,12 +38,12 @@ static const struct kwtable *reserved_word(register const char *str, register si
 #line 9 "defs/keywords"
 struct kwtable;
 
-#define TOTAL_KEYWORDS 41
+#define TOTAL_KEYWORDS 42
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 12
 #define MIN_HASH_VALUE 8
-#define MAX_HASH_VALUE 50
-/* maximum key range = 43, duplicates = 0 */
+#define MAX_HASH_VALUE 51
+/* maximum key range = 44, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -142,6 +142,7 @@ struct stringpool_t
     char stringpool_str46[sizeof("defined?")];
     char stringpool_str47[sizeof("class")];
     char stringpool_str50[sizeof("while")];
+    char stringpool_str51[sizeof("returns")];
   };
 static const struct stringpool_t stringpool_contents =
   {
@@ -185,7 +186,8 @@ static const struct stringpool_t stringpool_contents =
     "BEGIN",
     "defined?",
     "class",
-    "while"
+    "while",
+    "returns"
   };
 #define stringpool ((const char *) &stringpool_contents)
 const struct kwtable *
@@ -276,7 +278,9 @@ rb_reserved_word (register const char *str, register size_t len)
       {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str47, {keyword_class, keyword_class}, EXPR_CLASS},
       {-1}, {-1},
 #line 50 "defs/keywords"
-      {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str50, {keyword_while, modifier_while}, EXPR_VALUE}
+      {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str50, {keyword_while, modifier_while}, EXPR_VALUE},
+#line 42 "defs/keywords"
+      {(int)(size_t)&((struct stringpool_t *)0)->stringpool_str51, {keyword_returns, keyword_returns}, EXPR_BEG}
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)

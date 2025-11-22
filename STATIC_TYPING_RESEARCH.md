@@ -22,14 +22,14 @@ end
 
 ### Return Type Annotations
 ```ruby
-def method_name(param: Integer) -> String
+def method_name(param: Integer) returns String
   # method body
 end
 ```
 
 ### Combined
 ```ruby
-def calculate(x: Integer, y: Integer) -> Integer
+def calculate(x: Integer, y: Integer) returns Integer
   x + y
 end
 ```
@@ -92,10 +92,10 @@ end
 - Added `check_primitive_type_name()` helper function
 - Modified `f_arg_item` rule to support `param: Type` syntax
 - Extended method definition rules for return type annotations:
-  - Regular methods: `def foo() -> Type ... end`
-  - Endless methods: `def foo() -> Type = expr`
-  - Singleton methods: `def self.foo() -> Type ... end`
-- Uses existing `tCONSTANT` token (no lexer changes needed!)
+  - Regular methods: `def foo() returns Type ... end`
+  - Endless methods: `def foo() returns Type = expr`
+  - Singleton methods: `def self.foo() returns Type ... end`
+- Added `keyword_returns` token to lexer via `defs/keywords`
 - Parse-time validation of type names
 - Stores types in AST node fields
 
@@ -103,7 +103,7 @@ end
 
 ## Remaining Work
 
-### ⚠️  Phase 6: Type Checking Implementation (COMPLETED - SYNTAX ISSUES)
+### ✅ Phase 6: Type Checking Implementation (COMPLETED)
 
 **Files Modified:**
 - `iseq.h` - Added return type fields to `iseq_compile_data`
@@ -111,37 +111,23 @@ end
 - `type_system.c` - Type inference and compatibility checking
 - `type_system.h` - Type system interface
 - `parse.y` - Grammar rules for return type annotations
-- `tool/lrama/lib/lrama/grammar_validator.rb` - Allow 1 reduce/reduce conflict
+- `defs/keywords` - Added `returns` keyword
 
 **Completed Tasks:**
 - ✅ Implemented type inference for literal expressions
 - ✅ Added return type checking in method compilation
 - ✅ Type mismatch errors generated via COMPILE_ERROR
 - ✅ Grammar rules added for return type syntax
-- ✅ Ruby builds successfully
+- ✅ Added `keyword_returns` token to parser
 
-**Attempted Syntax Options:**
-1. `def foo() -> Integer` - Conflicts with lambda syntax `-> {}`
-2. `def foo() : Integer` - Conflicts with parameter type syntax `param: Type`
-3. `def foo() => Integer` - Has reduce/reduce conflict, doesn't parse correctly
-4. `def foo() :: Integer` - Has reduce/reduce conflict, parsed as method body
+**Final Syntax Choice:**
+- **Chosen:** `def foo() returns Integer`
+- Uses keyword-based approach to avoid grammar conflicts
+- Requires lexer changes but provides clean, unambiguous syntax
+- Works for both regular and endless method definitions
 
-**Current Status:**
-- Type checking infrastructure is fully implemented and compiles
-- Grammar has fundamental conflicts with existing Ruby syntax
-- All common operator tokens (`->`, `:`, `=>`, `::`) are ambiguous in method context
-- 1 reduce/reduce conflict remains regardless of syntax choice
-
-**Root Cause:**
-The grammar conflict stems from Ruby's flexible syntax where operators can appear in multiple contexts. Any token sequence after a method signature can be interpreted as either:
-1. A type annotation (what we want)
-2. The start of the method body (existing behavior)
-3. Part of a parameter expression
-
-**Recommendations:**
-- Use a keyword-based syntax (e.g., `def foo() returns Integer`) requiring lexer changes
-- Or accept that static typing requires more explicit delimiters that break Ruby's aesthetic
-- The implementation demonstrates why Ruby's creator resists static typing: it fundamentally conflicts with the language's syntactic philosophy
+**Syntax Exploration:**
+Earlier attempts using operator-based syntax (`->`, `:`, `=>`, `::`) all had grammar conflicts with Ruby's existing syntax. The keyword `returns` provides a clean solution that avoids these ambiguities while remaining readable.
 
 ### 🔄 Phase 8: Testing (PENDING)
 
@@ -191,25 +177,25 @@ autoconf
 make
 
 # Test
-./ruby -e "def foo(x: Integer) -> Integer; x; end; foo(42)"
+./ruby -e "def foo(x: Integer) returns Integer; x; end; foo(42)"
 ```
 
 ## Example Code
 
 ### Valid (Should Work)
 ```ruby
-def add(x: Integer, y: Integer) -> Integer
+def add(x: Integer, y: Integer) returns Integer
   x + y
 end
 
-def greet(name: String) -> String
+def greet(name: String) returns String
   "Hello, #{name}"
 end
 ```
 
 ### Invalid (Should Raise SyntaxError)
 ```ruby
-def bad_return(x: Integer) -> String
+def bad_return(x: Integer) returns String
   123  # SyntaxError: expected String, got Integer
 end
 
