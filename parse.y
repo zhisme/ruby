@@ -2631,7 +2631,7 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
 #endif /* !RIPPER */
 %}
 
-%expect 2
+%expect 0
 %define api.pure
 %define parse.error verbose
 %printer {
@@ -2976,7 +2976,7 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
                     /*% ripper: def!($:head, $:args, $:$) %*/
                         local_pop(p);
                     }
-                | defn_head[head] f_opt_paren_args[args] tLAMBDA tCONSTANT '=' bodystmt
+                | defn_head[head] f_opt_paren_args[args] tCOLON3 tCONSTANT '=' bodystmt
                     {
                         int type = check_primitive_type_name(p, $tCONSTANT);
                         if (type == 0) {
@@ -3003,7 +3003,7 @@ rb_parser_ary_free(rb_parser_t *p, rb_parser_ary_t *ary)
                     /*% ripper: defs!(*$:head[0..2], $:args, $:$) %*/
                         local_pop(p);
                     }
-                | defs_head[head] f_opt_paren_args[args] tLAMBDA tCONSTANT '=' bodystmt
+                | defs_head[head] f_opt_paren_args[args] tCOLON3 tCONSTANT '=' bodystmt
                     {
                         int type = check_primitive_type_name(p, $tCONSTANT);
                         if (type == 0) {
@@ -4711,7 +4711,7 @@ primary		: inline_primary
                 }
             | defn_head[head]
               f_arglist[args]
-              tLAMBDA
+              tASSOC
               tCONSTANT
                 {
                     int type = check_primitive_type_name(p, $tCONSTANT);
@@ -4748,7 +4748,7 @@ primary		: inline_primary
                 }
             | defs_head[head]
               f_arglist[args]
-              tLAMBDA
+              tASSOC
               tCONSTANT
                 {
                     int type = check_primitive_type_name(p, $tCONSTANT);

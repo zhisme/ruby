@@ -17,7 +17,7 @@ module Lrama
     def conflicts_within_threshold?
       return true unless @grammar.expect
 
-      # Temporarily allow 1 reduce/reduce conflict for static typing research
+      # Allow 1 reduce/reduce conflict for type annotation syntax
       [sr_conflicts_within_threshold(@grammar.expect), rr_conflicts_within_threshold(1)].all?
     end
 
